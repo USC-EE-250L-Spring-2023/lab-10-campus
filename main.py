@@ -12,7 +12,7 @@ def generate_data() -> List[int]:
     return np.random.randint(100, 10000, 1000).tolist()
 
 def process1(data: List[int]) -> List[int]:
-    """TODO: Document this function. What does it do? What are the inputs and outputs?"""
+    """Looks at a list of inputs and finds the largest prime number for each element."""
     def foo(x):
         """Find the next largest prime number."""
         while True:
@@ -22,7 +22,7 @@ def process1(data: List[int]) -> List[int]:
     return [foo(x) for x in data]
 
 def process2(data: List[int]) -> List[int]:
-    """TODO: Document this function. What does it do? What are the inputs and outputs?"""
+    """Looks at a list of inputs and finds the largest perfect square for each element."""
     def foo(x):
         """Find the next largest prime number."""
         while True:
@@ -32,10 +32,10 @@ def process2(data: List[int]) -> List[int]:
     return [foo(x) for x in data]
 
 def final_process(data1: List[int], data2: List[int]) -> List[int]:
-    """TODO: Document this function. What does it do? What are the inputs and outputs?"""
+    """Compute the mean difference between each list in process1 and process2."""
     return np.mean([x - y for x, y in zip(data1, data2)])
 
-offload_url = 'http://192.168.4.74:5000' # TODO: Change this to the IP address of your server
+offload_url = '172.20.10.7:5000'
 
 def run(offload: Optional[str] = None) -> float:
     """Run the program, offloading the specified function(s) to the server.
@@ -54,7 +54,7 @@ def run(offload: Optional[str] = None) -> float:
         data1 = None
         def offload_process1(data):
             nonlocal data1
-            # TODO: Send a POST request to the server with the input data
+            response = requests.post(f"{offload_url}/process1", json=data)
             data1 = response.json()
         thread = threading.Thread(target=offload_process1, args=(data,))
         thread.start()
@@ -66,26 +66,75 @@ def run(offload: Optional[str] = None) -> float:
         #   ChatGPT is also good at explaining the difference between parallel and concurrent execution!
         #   Make sure to cite any sources you use to answer this question.
     elif offload == 'process2':
-        # TODO: Implement this case
-        pass
+        data2 = None
+        def offload_process2(data):
+            nonlocal data2
+            response = requests.post(f"{offload_url}/process2", json=data)
+            data2 = response.json()
+        thread = threading.Thread(target=offload_process2, args=(data,))
+        thread.start()
+        data1 = process1(data)
+        thread.join()
     elif offload == 'both':
-        # TODO: Implement this case
-        pass
+        data1 = None
+        data2 = None
+        def offload_both(data):
+            nonlocal data1, data2
+            response1 = requests.post(f"{offload_url}/process1", json=data)
+            data1 = response1.json()
+            response2 = requests.post(f"{offload_url}/process2", json=data)
+            data2 = response2.json()
+        thread = threading.Thread(target=offload_both, args=(data,))
+        thread.start()
+        thread.join()
 
     ans = final_process(data1, data2)
     return ans 
 
 def main():
-    # TODO: Run the program 5 times for each offloading mode, and record the total execution time
+    # Run the program 5 times for each offloading mode, and record the total execution time
+    results = {
+        'local': [],
+        'process1': [],
+        'process2': [],
+        'both': []
+    }
+
+    # Run the program 5 times for each offloading mode, and record the total execution time
+    for i in range(5):
+        start_time = time.time()
+        run()
+        end_time = time.time()
+        results['local'].append(end_time - start_time)
+
+        start_time = time.time()
+        run(offload='process1')
+        end_time = time.time()
+        results['process1'].append(end_time - start_time)
+
+        start_time = time.time()
+        run(offload='process2')
+        end_time = time.time()
+        results['process2'].append(end_time - start_time)
+
+        start_time = time.time()
+        run(offload='both')
+        end_time = time.time()
+        results['both'].append(end_time - start_time)
+
     #   Compute the mean and standard deviation of the execution times
+    mean = {k: np.mean(v) for k, v in results.items()}
+    std = {k: np.std(v) for k, v in results.items()}
     #   Hint: store the results in a pandas DataFrame, use previous labs as a reference
+    dataFrame = pd.DataFrame({'mean': mean, 'std': std})
 
-
-    # TODO: Plot makespans (total execution time) as a bar chart with error bars
     # Make sure to include a title and x and y labels
+    fig = px.bar(dataFrame, y='mean', error_y='std', color=dataFrame.index)
+    fig.update_layout(title='Execution time for offloading modes', xaxis_title='Offloading mode', yaxis_title='Execution time (s)')
 
+    fig.write_image('makespan.png')
 
-    # TODO: save plot to "makespan.png"
+    print(dataFrame)
 
 
     # Question 4: What is the best offloading mode? Why do you think that is?
