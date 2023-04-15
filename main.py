@@ -35,7 +35,7 @@ def final_process(data1: List[int], data2: List[int]) -> List[int]:
     """Compute the mean difference between each list in process1 and process2."""
     return np.mean([x - y for x, y in zip(data1, data2)])
 
-offload_url = '172.20.10.7:5000'
+offload_url = 'http://127.0.0.1:5000'
 
 def run(offload: Optional[str] = None) -> float:
     """Run the program, offloading the specified function(s) to the server.
